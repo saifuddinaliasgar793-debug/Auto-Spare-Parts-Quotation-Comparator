@@ -1,7 +1,7 @@
 import streamlit as st
 
 # ---- SIMPLE PASSWORD PROTECTION ----
-PASSWORD = "$Saifuddin@123"  # Change this to your own password
+PASSWORD = "$Saifuddin123"  # Change this to your own password
 
 def check_password():
     def password_entered():
