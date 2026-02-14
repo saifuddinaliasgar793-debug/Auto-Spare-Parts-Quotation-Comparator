@@ -1,3 +1,29 @@
+import streamlit as st
+
+# ---- SIMPLE PASSWORD PROTECTION ----
+PASSWORD = "$Saifuddin@123"  # Change this to your own password
+
+def check_password():
+    def password_entered():
+        if st.session_state["password"] == PASSWORD:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]
+        else:
+            st.session_state["password_correct"] = False
+
+    if "password_correct" not in st.session_state:
+        st.text_input("Enter Password", type="password", key="password", on_change=password_entered)
+        return False
+    elif not st.session_state["password_correct"]:
+        st.text_input("Enter Password", type="password", key="password", on_change=password_entered)
+        st.error("Incorrect Password")
+        return False
+    else:
+        return True
+
+
+if not check_password():
+    st.stop()
 import re
 import pandas as pd
 import streamlit as st
