@@ -79,7 +79,7 @@ if uploaded_files:
 all_rows = []
 
 if uploaded_files:
-    st.info("For each file: enter supplier name → select Part Number column → select Price column.")
+    st.info("For each file: enter supplier name → select part number column → select Price column.")
 
     for f in uploaded_files:
         st.subheader(f"File: {f.name}")
@@ -105,7 +105,7 @@ if uploaded_files:
             st.error("This file has no columns.")
             continue
 
-        part_col = st.selectbox("Select Part Number column", cols, key=f"part_{f.name}")
+        part_col = st.selectbox("Select part number column", cols, key=f"part_{f.name}")
         price_col = st.selectbox("Select Price column", cols, key=f"price_{f.name}")
 
         temp = df[[part_col, price_col]].copy()
@@ -175,7 +175,7 @@ if uploaded_files:
             )
 
         # ---------------- SECOND TABLE ----------------
-        st.markdown("## Part numbers that exist in only one file")
+        st.markdown("## part numbers that exist in only one file")
 
         if len(single_supplier) == 0:
             st.success("All part numbers appear in at least 2 supplier files.")
@@ -242,7 +242,7 @@ if uploaded_files:
 
             # 🔹 Check required columns exist
             if "part number" not in df.columns or "price" not in df.columns:
-                st.error(f"{supplier_name} must have 'Part Number' and 'Price'")
+                st.error(f"{supplier_name} must have 'part number' and 'Price'")
                 continue
 
             # 🔹 Normalize part number
@@ -272,18 +272,18 @@ else:
     st.stop()
 
 # Count how many suppliers have this part
-merged["supplier_count"] = merged.drop(columns=["Part Number"]).notna().sum(axis=1)
+merged["supplier_count"] = merged.drop(columns=["part number"]).notna().sum(axis=1)
 
 # Only keep parts in 2+ suppliers
 filtered = merged[merged["supplier_count"] >= 2].copy()
 
 # --- CHEAPEST ---
-filtered["Cheapest Supplier"] = filtered.drop(columns=["Part Number", "supplier_count"]).idxmin(axis=1)
-filtered["Cheapest Price"] = filtered.drop(columns=["Part Number", "supplier_count"]).min(axis=1)
+filtered["Cheapest Supplier"] = filtered.drop(columns=["part number", "supplier_count"]).idxmin(axis=1)
+filtered["Cheapest Price"] = filtered.drop(columns=["part number", "supplier_count"]).min(axis=1)
 
 # --- SECOND CHEAPEST ---
 def second_cheapest(row):
-    prices = row.drop(["Part Number", "supplier_count"])
+    prices = row.drop(["part number", "supplier_count"])
     prices = prices.dropna().sort_values()
     if len(prices) >= 2:
         return prices.index[1], prices.iloc[1]
@@ -300,7 +300,7 @@ st.dataframe(cheapest_counts)
 selected_supplier = st.selectbox("Select supplier (Cheapest)", cheapest_counts["Supplier"])
 
 if selected_supplier:
-    supplier_df = filtered[filtered["Cheapest Supplier"] == selected_supplier][["Part Number", "Cheapest Price"]]
+    supplier_df = filtered[filtered["Cheapest Supplier"] == selected_supplier][["part number", "Cheapest Price"]]
     
     file = create_download_file(supplier_df, selected_supplier)
     
@@ -318,7 +318,7 @@ st.dataframe(second_counts)
 selected_second = st.selectbox("Select supplier (Second Cheapest)", second_counts["Supplier"])
 
 if selected_second:
-    second_df = filtered[filtered["Second Supplier"] == selected_second][["Part Number", "Second Price"]]
+    second_df = filtered[filtered["Second Supplier"] == selected_second][["part number", "Second Price"]]
     
     file2 = create_download_file(second_df, selected_second)
     
