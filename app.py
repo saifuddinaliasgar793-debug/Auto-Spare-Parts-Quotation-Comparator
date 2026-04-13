@@ -1,5 +1,15 @@
 import streamlit as st
+import pandas as pd
+from io import BytesIO
 
+def create_download_file(df, supplier_name):
+    output = BytesIO()
+    df.to_excel(output, index=False)
+    output.seek(0)
+    return output
+
+def normalize_part_number(x):
+    return str(x).strip().upper()
 # ---- SIMPLE PASSWORD PROTECTION ----
 PASSWORD = "$Saifuddin123"  # Change this to your own password
 
@@ -182,3 +192,73 @@ if uploaded_files:
 
 else:
     st.write("Upload quotation files to start comparing.")
+all_parts = []
+
+for supplier_name, df in supplier_data.items():
+    df["Part Number"] = df["Part Number"].apply(normalize_part_number)
+    df = df[["Part Number", "Price"]].copy()
+    df.rename(columns={"Price": supplier_name}, inplace=True)
+    all_parts.append(df)
+
+# Merge all suppliers
+merged = all_parts[0]
+for df in all_parts[1:]:
+    merged = pd.merge(merged, df, on="Part Number", how="outer")
+
+# Count how many suppliers have this part
+merged["supplier_count"] = merged.drop(columns=["Part Number"]).notna().sum(axis=1)
+
+# Only keep parts in 2+ suppliers
+filtered = merged[merged["supplier_count"] >= 2].copy()
+
+# --- CHEAPEST ---
+filtered["Cheapest Supplier"] = filtered.drop(columns=["Part Number", "supplier_count"]).idxmin(axis=1)
+filtered["Cheapest Price"] = filtered.drop(columns=["Part Number", "supplier_count"]).min(axis=1)
+
+# --- SECOND CHEAPEST ---
+def second_cheapest(row):
+    prices = row.drop(["Part Number", "supplier_count"])
+    prices = prices.dropna().sort_values()
+    if len(prices) >= 2:
+        return prices.index[1], prices.iloc[1]
+    return None, None
+
+filtered[["Second Supplier", "Second Price"]] = filtered.apply(
+    lambda row: pd.Series(second_cheapest(row)), axis=1
+)
+cheapest_counts = filtered["Cheapest Supplier"].value_counts().reset_index()
+cheapest_counts.columns = ["Supplier", "Win Count"]
+
+st.subheader("Cheapest Supplier Win Count (2+ files only)")
+st.dataframe(cheapest_counts)
+selected_supplier = st.selectbox("Select supplier (Cheapest)", cheapest_counts["Supplier"])
+
+if selected_supplier:
+    supplier_df = filtered[filtered["Cheapest Supplier"] == selected_supplier][["Part Number", "Cheapest Price"]]
+    
+    file = create_download_file(supplier_df, selected_supplier)
+    
+    st.download_button(
+        label="Download Cheapest Parts",
+        data=file,
+        file_name=f"{selected_supplier}_cheapest.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    second_counts = filtered["Second Supplier"].value_counts().reset_index()
+second_counts.columns = ["Supplier", "Second Win Count"]
+
+st.subheader("Second Cheapest Supplier Win Count")
+st.dataframe(second_counts)
+selected_second = st.selectbox("Select supplier (Second Cheapest)", second_counts["Supplier"])
+
+if selected_second:
+    second_df = filtered[filtered["Second Supplier"] == selected_second][["Part Number", "Second Price"]]
+    
+    file2 = create_download_file(second_df, selected_second)
+    
+    st.download_button(
+        label="Download Second Cheapest Parts",
+        data=file2,
+        file_name=f"{selected_second}_second_cheapest.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
