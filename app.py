@@ -58,7 +58,24 @@ uploaded_files = st.file_uploader(
     type=["csv", "xlsx", "xls"],
     accept_multiple_files=True
 )
+if uploaded_files:
 
+    supplier_data = {}
+
+    for file in uploaded_files:
+        try:
+            if file.name.endswith(".csv"):
+                df = pd.read_csv(file)
+            else:
+                df = pd.read_excel(file)
+
+            supplier_name = file.name
+            supplier_data[supplier_name] = df
+
+        except Exception as e:
+            st.error(f"Error reading {file.name}: {e}")
+
+    # 👉 ALL YOUR EXISTING LOGIC GOES BELOW THIS
 all_rows = []
 
 if uploaded_files:
@@ -193,7 +210,20 @@ if uploaded_files:
 else:
     st.write("Upload quotation files to start comparing.")
 all_parts = []
+supplier_data = {}
 
+for file in uploaded_files:
+    try:
+        if file.name.endswith(".csv"):
+            df = pd.read_csv(file)
+        else:
+            df = pd.read_excel(file)
+
+        supplier_name = file.name
+        supplier_data[supplier_name] = df
+
+    except Exception as e:
+        st.error(f"Error reading {file.name}: {e}")
 for supplier_name, df in supplier_data.items():
     df["Part Number"] = df["Part Number"].apply(normalize_part_number)
     df = df[["Part Number", "Price"]].copy()
