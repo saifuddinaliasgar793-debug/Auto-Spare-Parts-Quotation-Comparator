@@ -278,17 +278,27 @@ merged["supplier_count"] = merged.drop(columns=["part number"]).notna().sum(axis
 filtered = merged[merged["supplier_count"] >= 2].copy()
 
 # --- CHEAPEST ---
-filtered["Cheapest Supplier"] = filtered.drop(columns=["part number", "supplier_count"]).idxmin(axis=1)
 price_cols = [c for c in filtered.columns if c not in ["part number", "supplier_count"]]
+
+if not price_cols:
+    st.error("No supplier price columns found.")
+    st.stop()
+
 filtered[price_cols] = filtered[price_cols].apply(pd.to_numeric, errors="coerce")
-filtered["Cheapest Supplier"] = filtered[price_cols].idxmin(axis=1, skipna=True)
+
+filtered["Cheapest Price"] = filtered[price_cols].min(axis=1, skipna=True)
+
+all_na_mask = filtered[price_cols].isna().all(axis=1)
+
+filtered["Cheapest Supplier"] = ""
+filtered.loc[~all_na_mask, "Cheapest Supplier"] = filtered.loc[~all_na_mask, price_cols].idxmin(axis=1)
+filtered.loc[all_na_mask, "Cheapest Supplier"] = "No valid price"
 
 
 
 # --- SECOND CHEAPEST ---
 def second_cheapest(row):
-    prices = row.drop(["part number", "supplier_count"])
-    prices = prices.dropna().sort_values()
+    prices = row[price_cols].dropna().sort_values()
     if len(prices) >= 2:
         return prices.index[1], prices.iloc[1]
     return None, None
