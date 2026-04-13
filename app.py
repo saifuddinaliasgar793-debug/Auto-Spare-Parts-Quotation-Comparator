@@ -279,7 +279,11 @@ filtered = merged[merged["supplier_count"] >= 2].copy()
 
 # --- CHEAPEST ---
 filtered["Cheapest Supplier"] = filtered.drop(columns=["part number", "supplier_count"]).idxmin(axis=1)
-filtered["Cheapest Price"] = filtered.drop(columns=["part number", "supplier_count"]).min(axis=1)
+price_cols = [c for c in filtered.columns if c not in ["part number", "supplier_count"]]
+filtered[price_cols] = filtered[price_cols].apply(pd.to_numeric, errors="coerce")
+filtered["Cheapest Supplier"] = filtered[price_cols].idxmin(axis=1, skipna=True)
+
+
 
 # --- SECOND CHEAPEST ---
 def second_cheapest(row):
