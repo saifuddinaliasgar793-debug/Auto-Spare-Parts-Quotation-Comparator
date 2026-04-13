@@ -224,16 +224,52 @@ for file in uploaded_files:
 
     except Exception as e:
         st.error(f"Error reading {file.name}: {e}")
-for supplier_name, df in supplier_data.items():
-    df["Part Number"] = df["Part Number"].apply(normalize_part_number)
-    df = df[["Part Number", "Price"]].copy()
-    df.rename(columns={"Price": supplier_name}, inplace=True)
-    all_parts.append(df)
+all_parts = []
+supplier_data = {}
 
+if uploaded_files:
+    for file in uploaded_files:
+        try:
+            if file.name.endswith(".csv"):
+                df = pd.read_csv(file)
+            else:
+                df = pd.read_excel(file)
+
+            supplier_name = file.name
+
+            # 🔹 Clean column names
+            df.columns = df.columns.str.strip().str.lower()
+
+            # 🔹 Check required columns exist
+            if "part number" not in df.columns or "price" not in df.columns:
+                st.error(f"{supplier_name} must have 'Part Number' and 'Price'")
+                continue
+
+            # 🔹 Normalize part number
+            df["part number"] = df["part number"].apply(normalize_part_number)
+
+            # 🔹 Keep only required columns
+            temp = df[["part number", "price"]].copy()
+
+            # 🔹 Rename price column to supplier name
+            temp = temp.rename(columns={"price": supplier_name})
+
+            # 🔹 Store clean data
+            supplier_data[supplier_name] = temp
+            all_parts.append(temp)
+
+        except Exception as e:
+            st.error(f"Error reading {file.name}: {e}")
 # Merge all suppliers
-merged = all_parts[0]
-for df in all_parts[1:]:
-    merged = pd.merge(merged, df, on="Part Number", how="outer")
+if len(all_parts) > 0:
+    merged = all_parts[0]
+
+    for df in all_parts[1:]:
+        merged = pd.merge(merged, df, on="part number", how="outer")
+
+else:
+    st.warning("No valid data found in uploaded files.")
+    st.stop()
 
 # Count how many suppliers have this part
 merged["supplier_count"] = merged.drop(columns=["Part Number"]).notna().sum(axis=1)
